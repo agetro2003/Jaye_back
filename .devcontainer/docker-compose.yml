@@ -27,7 +27,9 @@ services:
       POSTGRES_USER: postgres
       POSTGRES_DB: postgres
       POSTGRES_PASSWORD: postgres
-
+    ports:
+      - "5433:5432" # Mapea el puerto 5432 del contenedor al 5433 en tu máquina local
+      
     # Add "forwardPorts": [5432] to **devcontainer.json** to forward PostgreSQL locally.
     # (Adding the "ports" property to this file will not forward from a Codespace.)
 

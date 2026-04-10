@@ -4,11 +4,11 @@
     "service": "app",
     "workspaceFolder": "/workspaces/${localWorkspaceFolderBasename}",
 
-    // Exponemos el puerto 8000 (típico para FastAPI/Flask) y el 5432 (PostgreSQL)
-    "forwardPorts": [8000, 5432],
+    // Exponemos el puerto 8000 (típico para FastAPI/Flask) y el 5433 (PostgreSQL)
+    "forwardPorts": [8000, 5433],
 
-    // Descomenta la siguiente línea cuando crees tu archivo requirements.txt
-    // "postCreateCommand": "pip install -r requirements.txt",
+    // Linea para instalar las dependencias de Python después de crear el contenedor
+    "postCreateCommand": "pip install -r requirements.txt",
 
     // Configuraciones y extensiones recomendadas para VS Code
     "customizations": {

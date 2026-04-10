@@ -1,12 +1,12 @@
 from fastapi import APIRouter, Depends
 
-from Utils.dependencies import get_token
+from Utils.dependencies import get_current_user
 
 
 router = APIRouter(
     prefix="/songs", 
     tags=["Songs"],
-    dependencies=[Depends(get_token)])
+    dependencies=[Depends(get_current_user)])
 
 @router.get("/{song_id}")
 def get_song(song_id: int):

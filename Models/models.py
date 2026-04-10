@@ -3,11 +3,11 @@ from sqlalchemy import Column, Integer, String, ForeignKey, DateTime
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
 
-from Utils.database import Base
+from Services.database import Base
 
 
 class User(Base): 
-    __tablename__ = "user"
+    __tablename__ = "users"
     
     user_id = Column(Integer, primary_key=True, index=True) 
     user_name = Column(String, unique=True, index=True, nullable=False) 
@@ -18,21 +18,21 @@ class User(Base):
 
 
 class Folder(Base):
-    __tablename__ = "folder"
+    __tablename__ = "folders"
     
     folder_id = Column(Integer, primary_key=True, index=True) 
     folder_name = Column(String, index=True, nullable=False) 
-    user_id = Column(Integer, ForeignKey("user.user_id")) 
+    user_id = Column(Integer, ForeignKey("users.user_id")) 
 
     owner = relationship("User", back_populates="folders")
-    songs = relationship("Song", back_populates="folder")
+    songs = relationship("Song", back_populates="folder", cascade="all, delete-orphan")
 
 class Song(Base):
-    __tablename__ = "song"
+    __tablename__ = "songs"
     
     song_id = Column(Integer, primary_key=True, index=True) 
     song_title = Column(String, index=True, nullable=False) 
-    folder_id = Column(Integer, ForeignKey("folder.folder_id"))
+    folder_id = Column(Integer, ForeignKey("folders.folder_id"))
     song_abc_text = Column(String)
     song_songwriter = Column(String, nullable=False)
     song_last_update = Column(DateTime, server_default=func.now(), onupdate=func.now())

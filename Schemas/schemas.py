@@ -41,3 +41,16 @@ class SongResponse(BaseModel):
     song_created_at: datetime
     
     model_config = ConfigDict(from_attributes=True)
+
+
+class UserLogin(BaseModel):
+    user_email: EmailStr
+    user_password: str
+
+class TokenResponse(BaseModel):
+    access_token: str
+    token_type: str
+
+class PasswordChange(BaseModel):
+    old_password: str
+    new_password: str
