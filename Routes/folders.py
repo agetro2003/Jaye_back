@@ -38,7 +38,7 @@ def update_folder(
 ):
     updated_folder = edit_folder(db, folder_id, current_user["user_id"], folder.dict())
     if not updated_folder:
-        return {"error": "Carpeta no encontrada o no pertenece al usuario"}
+        raise HTTPException(status_code=404, detail="Carpeta no encontrada o no pertenece al usuario")
     return updated_folder
 
 

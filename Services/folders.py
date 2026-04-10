@@ -25,3 +25,4 @@ def delete_folder(db: Session, folder: Folder):
     db.delete(folder)
     db.commit()
     return folder
+
