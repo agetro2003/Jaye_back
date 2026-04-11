@@ -5,7 +5,9 @@ from Services.database import get_db
 from Utils.dependencies import get_current_user
 from Controllers.songs import songs_in_folder, create_song, edit_song, remove_song, get_song
 
-from Schemas.schemas import SongCreate, SongResponse, SongUpdate
+from AICore.model import generate_proposals
+
+from Schemas.schemas import ProposalRequest, SongCreate, SongResponse, SongUpdate
 from typing import List
 
 router = APIRouter(
@@ -50,5 +52,18 @@ def delete_song(song_id: int, current_user: dict = Depends(get_current_user), db
     return {"mensaje": f"Canción con ID {song_id} eliminada exitosamente"}
 
 @router.post("/generate-ai")
-def generate_ai_proposal():
-    return {"mensaje": "Propuesta de canción generada por IA", "song": {"title": "Nueva Canción", "artist": "IA"}}
+def generate_ai_proposal(
+    request: ProposalRequest,
+    current_user: dict = Depends(get_current_user)
+):
+    try: 
+        proposals = generate_proposals(
+            abc_text=request.abcText,
+            bars=request.bars,
+            num_variations=request.num_variations,
+            temperature=request.temperature
+        )
+        return {"proposals": proposals}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error al generar propuestas: {str(e)}")
+        

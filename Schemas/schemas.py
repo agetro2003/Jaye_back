@@ -61,3 +61,9 @@ class TokenResponse(BaseModel):
 class PasswordChange(BaseModel):
     old_password: str
     new_password: str
+
+class ProposalRequest(BaseModel):
+    abcText: str
+    bars: int = 4
+    num_variations: int = 3
+    temperature: float = 1.0     
