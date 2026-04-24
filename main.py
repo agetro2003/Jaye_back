@@ -1,5 +1,5 @@
 from fastapi import FastAPI
-
+from fastapi.middleware.cors import CORSMiddleware
 from Routes import songs, folders, users, auth
 from Services.database import engine
 from Models import models
@@ -11,7 +11,19 @@ app = FastAPI(
     description="API para la plataforma web de composición musical asistida por IA",
     version="1.0.0"
 )
+origins = [
+    "http://localhost:5173",
+    "http://127.0.0.1:5173",
+    # Puedes añadir "*" temporalmente si te da problemas, pero esto es más seguro
+]
 
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=origins,
+    allow_credentials=True,
+    allow_methods=["*"], # Esto permite el OPTIONS, POST, GET, etc.
+    allow_headers=["*"], # Permite enviar tokens y JSON
+)
 
 @app.get("/")
 def read_root():
