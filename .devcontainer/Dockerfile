@@ -8,3 +8,7 @@ RUN rm -f /etc/apt/sources.list.d/yarn.list
 # Instalamos el paquete abcmidi necesario para las utilidades de conversión
 RUN apt-get update && export DEBIAN_FRONTEND=noninteractive \
     && apt-get -y install --no-install-recommends abcmidi
+
+
+#command to start the application 
+#uvicorn main:app --host 0.0.0.0 --port 8000 --reload

@@ -1,4 +1,4 @@
-from Services.songs import get_song_by_id, get_songs_from_folder, update_song, delete_song, add_song
+from Services.songs import get_recent_songs_for_user, get_song_by_id, get_songs_from_folder, update_song, delete_song, add_song
 from Services.folders import get_folder_by_id
 from Models.models import Song
 from sqlalchemy.orm import Session
@@ -43,3 +43,7 @@ def get_song(db: Session, song_id: int, user_id: int):
     if not song:
         return None
     return song
+
+
+def get_recent_songs(db: Session, user_id: int, limit: int = 5):
+    return get_recent_songs_for_user(db, user_id, limit)

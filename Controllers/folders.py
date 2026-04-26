@@ -1,11 +1,11 @@
 
 
 from sqlalchemy.orm import Session
-from Services.folders import get_user_folders, add_folder, update_folder, delete_folder, get_folder_by_id
+from Services.folders import get_user_folders, add_folder, update_folder, delete_folder, get_folder_by_id, get_user_folders_with_counts
 from Models.models import Folder
 
 def users_folders(db: Session, user_id: int):
-    return get_user_folders(db, user_id)
+    return get_user_folders_with_counts(db, user_id)
 
 def create_folder(db: Session, folder_name: str, user_id: int):
     new_folder = Folder(folder_name=folder_name, user_id=user_id)

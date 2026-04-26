@@ -28,3 +28,10 @@ def get_song_by_id(db: Session, song_id: int, user_id: int):
         Song.song_id == song_id,
         Folder.user_id == user_id
         ).first()
+
+def get_recent_songs_for_user(db: Session, user_id: int, limit: int = 5):
+    return db.query(Song).filter(
+        Song.user_id == user_id # Asumiendo que Song tiene un user_id, si no lo tiene, habría que cruzar con Folder
+    ).order_by(
+        Song.song_last_update.desc() # Ordenar de la más nueva a la más antigua
+    ).limit(limit).all()

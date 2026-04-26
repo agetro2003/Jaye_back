@@ -3,7 +3,7 @@ from sqlalchemy.orm import Session
 
 from Services.database import get_db
 from Utils.dependencies import get_current_user
-from Controllers.songs import songs_in_folder, create_song, edit_song, remove_song, get_song
+from Controllers.songs import get_recent_songs, songs_in_folder, create_song, edit_song, remove_song, get_song
 
 from AICore.model import generate_proposals
 
@@ -67,3 +67,12 @@ def generate_ai_proposal(
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error al generar propuestas: {str(e)}")
         
+
+@router.get("/recent", response_model=List[SongResponse])
+def get_recent_songs_route(
+    current_user: dict = Depends(get_current_user),
+    db: Session = Depends(get_db),
+    limit: int = 5
+):
+    songs = get_recent_songs(db, current_user["user_id"], limit)
+    return songs

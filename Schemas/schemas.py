@@ -23,9 +23,11 @@ class FolderResponse(BaseModel):
     folder_id: int
     folder_name: str
     user_id: int
-
+    
     model_config = ConfigDict(from_attributes=True)
 
+class FolderWithCountResponse(FolderResponse):
+    song_count: int
 
 class SongCreate(BaseModel):
     song_title: str

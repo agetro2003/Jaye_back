@@ -3,7 +3,7 @@ from sqlalchemy.orm import Session
 
 from Services.database import get_db
 from Utils.dependencies import get_current_user
-from Schemas.schemas import FolderResponse, FolderCreate, SongResponse
+from Schemas.schemas import FolderResponse, FolderCreate, SongResponse, FolderWithCountResponse
 from typing import List
 from Controllers.folders import users_folders, create_folder, edit_folder, remove_folder, get_songs_in_folder
 
@@ -13,7 +13,7 @@ router = APIRouter(
     dependencies=[Depends(get_current_user)]
     )
 
-@router.get("/", response_model=List[FolderResponse])
+@router.get("/", response_model=List[FolderWithCountResponse])
 def get_folders(
     current_user: dict = Depends(get_current_user),
     db: Session = Depends(get_db)
