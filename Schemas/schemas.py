@@ -40,6 +40,7 @@ class SongResponse(BaseModel):
     song_title: str
     folder_id: int
     song_abc_text: Optional[str]
+    song_songwriter: str
     song_last_update: datetime
     song_created_at: datetime
     

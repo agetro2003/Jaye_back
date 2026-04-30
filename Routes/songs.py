@@ -15,6 +15,16 @@ router = APIRouter(
     tags=["Songs"],
     dependencies=[Depends(get_current_user)])
 
+@router.get("/recent", response_model=List[SongResponse])
+def get_recent_songs_route(
+    current_user: dict = Depends(get_current_user),
+    db: Session = Depends(get_db),
+    limit: int = 5
+):
+    songs = get_recent_songs(db, current_user["user_id"], limit)
+    return songs
+
+
 @router.get("/{song_id}", response_model=SongResponse)
 def get_song_by_id_route(
     song_id: int,
@@ -68,11 +78,3 @@ def generate_ai_proposal(
         raise HTTPException(status_code=500, detail=f"Error al generar propuestas: {str(e)}")
         
 
-@router.get("/recent", response_model=List[SongResponse])
-def get_recent_songs_route(
-    current_user: dict = Depends(get_current_user),
-    db: Session = Depends(get_db),
-    limit: int = 5
-):
-    songs = get_recent_songs(db, current_user["user_id"], limit)
-    return songs
