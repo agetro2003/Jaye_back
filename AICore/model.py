@@ -8,6 +8,7 @@ import subprocess
 from note_seq.protobuf import generator_pb2
 import urllib.request
 import re
+import traceback 
 
 #Modelo de IA para generar propuestas musicales a partir de un texto ABC
 _MELODY_RNN_MODEL = None
@@ -34,6 +35,20 @@ def get_model():
         print(f"Modelo {model_name} cargado y listo para usar.")
 
     return _MELODY_RNN_MODEL
+
+def escape_chords_for_magenta(abc_text: str) -> str:
+    """
+    Convierte los acordes entre comillas ("Em") a "^Em" para que Magenta
+    no los interprete como acordes, pero mantiene las comillas para la partitura.
+    """
+    def replacer(match):
+        chord = match.group(1)
+        return f'"^{chord}"'
+
+    # Reemplaza "Em" → "^Em", "D7" → "^D7", etc.
+    escaped = re.sub(r'"([^"]+)"', replacer, abc_text)
+    return escaped
+
 
 
 def remove_initial_rests(abc_text: str) -> str:
@@ -65,65 +80,88 @@ def remove_abc_header(abc_text: str) -> str:
 
 
 
+
 def generate_proposals(abc_text, bars=4, num_variations=3, temperature=1.0):
     model = get_model()
     proposals = []
 
-# Convertimos el ABC a MIDI usando un archivo temporal para evitar problemas de concurrencia 
-    with tempfile.NamedTemporaryFile(suffix=".abc", delete=False) as temp_abc_in, \
-         tempfile.NamedTemporaryFile(suffix=".mid", delete=False) as temp_mid_in:
-        temp_abc_in.write(abc_text.encode('utf-8'))
-        temp_abc_in.flush()
+    # 1. Creamos archivos temporales de forma segura y cerramos el "candado" de Python
+    fd_abc, path_abc_in = tempfile.mkstemp(suffix=".abc")
+    fd_mid, path_mid_in = tempfile.mkstemp(suffix=".mid")
+    os.close(fd_abc)
+    os.close(fd_mid)
 
-        subprocess.run(["abc2midi", temp_abc_in.name, "-o", temp_mid_in.name], check=True)
+    try:
 
-        input_sequence = note_seq.midi_file_to_note_sequence(temp_mid_in.name)
-    
-    #limpiar archivos temporales
-    os.remove(temp_abc_in.name)
-    os.remove(temp_mid_in.name)
+        safe_abc = escape_chords_for_magenta(abc_text)
+        # Escribimos el ABC
+        with open(path_abc_in, 'w', encoding='utf-8') as f:
+            f.write(safe_abc)
 
-    # Configuracion de generación
-    qpm = input_sequence.tempos[0].qpm if input_sequence.tempos else 120
-    seconds_per_step = 60.0 / qpm / model.steps_per_quarter
+        # 2. abc2midi: Capturamos errores para saber por qué falla
+        try:
+            subprocess.run(["abc2midi", path_abc_in, "-o", path_mid_in], check=True, capture_output=True, text=True)
+        except subprocess.CalledProcessError as e:
+            print(f"❌ Error crítico en abc2midi: {e.stderr}")
+            raise Exception(f"Fallo en abc2midi: {e.stderr}")
 
-    total_steps = bars * model.steps_per_quarter * 4  # 4/4 time signature
-    duration_to_generate = total_steps * seconds_per_step
-
-    last_end_time = max(note.end_time for note in input_sequence.notes) if input_sequence.notes else 0
-
-    # Generar variaciones
-    for _ in range (num_variations): 
-        generator_options = generator_pb2.GeneratorOptions()
-        generator_options.args['temperature'].float_value = temperature
-        generator_options.generate_sections.add(
-            start_time=last_end_time,
-            end_time=last_end_time + duration_to_generate
-        )
-
-        generated_sequence = model.generate(input_sequence, generator_options)
+        # Leemos el MIDI a NoteSequence
+        input_sequence = note_seq.midi_file_to_note_sequence(path_mid_in)
         
-        # Usamos un archivo temporal para convertir el resultado a ABC
-        with tempfile.NamedTemporaryFile(suffix=".mid", delete=False) as temp_mid_out: 
-            note_seq.sequence_proto_to_midi_file(generated_sequence, temp_mid_out.name)
-            result = subprocess.run(["midi2abc", temp_mid_out.name], capture_output=True, text=True, check=True)
-            raw_new_abc = result.stdout
+        # Configuración de generación
+        qpm = input_sequence.tempos[0].qpm if input_sequence.tempos else 120
+        seconds_per_step = 60.0 / qpm / model.steps_per_quarter
+        total_steps = bars * model.steps_per_quarter * 4
+        duration_to_generate = total_steps * seconds_per_step
+        last_end_time = max(note.end_time for note in input_sequence.notes) if input_sequence.notes else 0
+
+        # Generar variaciones
+        for _ in range(num_variations): 
+            generator_options = generator_pb2.GeneratorOptions()
+            generator_options.args['temperature'].float_value = temperature
+            generator_options.generate_sections.add(
+                start_time=last_end_time,
+                end_time=last_end_time + duration_to_generate
+            )
+
+            generated_sequence = model.generate(input_sequence, generator_options)
+            
+            # 3. Archivo temporal para la salida de la IA
+            fd_out, path_mid_out = tempfile.mkstemp(suffix=".mid")
+            os.close(fd_out)
+
+            try:
+                note_seq.sequence_proto_to_midi_file(generated_sequence, path_mid_out)
+                result = subprocess.run(["midi2abc", path_mid_out], capture_output=True, text=True, check=True)
+                raw_new_abc = result.stdout
+            except subprocess.CalledProcessError as e:
+                print(f"❌ Error crítico en midi2abc: {e.stderr}")
+                raise Exception(f"Fallo en midi2abc: {e.stderr}")
+            finally:
+                if os.path.exists(path_mid_out): os.remove(path_mid_out)
+
+            clean_abc = remove_abc_header(raw_new_abc)
+            clean_abc = remove_initial_rests(clean_abc)
+
+            # Extraemos los compases nuevos
+            bar_list = [c.strip() for c in clean_abc.split("|") if c.strip()]
+            if len(bar_list) > bars:
+                new_bar = bar_list[-bars:]
+                proposal = "|".join(new_bar) + " |]"
+            else: 
+                proposal = clean_abc
+            
+            proposals.append(proposal)
+
+    except Exception as e:
+        print("\n=== ERROR INTERNO EN LA GENERACIÓN DE IA ===")
+        traceback.print_exc()
+        print("============================================\n")
+        raise e
         
-        os.remove(temp_mid_out.name)
-
-        clean_abc = remove_abc_header(raw_new_abc)
-        clean_abc = remove_initial_rests(clean_abc)
-
-        # separamos las propuestas de la entrada original
-        bar_list = [c.strip() for c in clean_abc.split("|") if c.strip()]
-
-        if len(bar_list) > bars:
-            new_bar = bar_list[bars:]
-            proposal = "|".join(new_bar)+" |]"
-        else: 
-            proposal = clean_abc
-        proposals.append(proposal)
-
-        
+    finally:
+        # Limpieza segura final
+        if os.path.exists(path_abc_in): os.remove(path_abc_in)
+        if os.path.exists(path_mid_in): os.remove(path_mid_in)
 
     return proposals
