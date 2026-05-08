@@ -8,19 +8,20 @@ ENV PYTHONUNBUFFERED 1
 # Directorio de trabajo en el contenedor
 WORKDIR /app
 
-# Instalamos compiladores y librerías base de audio para MIDI
+# Instalamos compiladores y librerías base de audio
 RUN apt-get update && export DEBIAN_FRONTEND=noninteractive \
     && apt-get -y install --no-install-recommends \
     build-essential \
     libasound2-dev \
     libjack-dev \
     abcmidi \
+    ffmpeg \
     python3-dev \
     libpq-dev \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
 
-    
+
 # Copiamos primero el archivo de requerimientos (aprovecha la caché de Docker)
 COPY requirements.txt .
 
