@@ -7,3 +7,5 @@ bcrypt==3.2.2
 PyJWT
 email-validator
 magenta
+resend
+python-dotenv

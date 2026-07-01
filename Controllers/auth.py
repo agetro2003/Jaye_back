@@ -1,7 +1,8 @@
 from passlib.context import CryptContext
-from Services.auth import get_user, register_user
+from Services.auth import get_user, register_user, create_reset_token, get_valid_reset_token
+from Services.email import send_password_reset_email
 from fastapi import HTTPException
-from Schemas.schemas import PasswordChange, UserCreate
+from Schemas.schemas import PasswordChange, UserCreate, ForgotPasswordRequest, ResetPasswordRequest
 from sqlalchemy.orm import Session
 from Models.models import User
 from Utils.security import create_access_token
@@ -58,3 +59,33 @@ def change_password(db: Session, user_id: int, passwords: PasswordChange):
     db.commit()
     db.refresh(user)
     return user
+
+
+def forgot_password(db: Session, request: ForgotPasswordRequest):
+    user = get_user(db, email=request.user_email)
+
+    # IMPORTANTE: respondemos lo mismo exista o no el correo.
+    # Si dijéramos "este email no existe", cualquiera podría usar el
+    # formulario para averiguar qué correos están registrados en Jaye.
+    if user:
+        reset_token = create_reset_token(db, user.user_id)
+        send_password_reset_email(user.user_email, reset_token.token)
+
+    return {"message": "Si el correo existe en nuestro sistema, recibirás un enlace para restablecer tu contraseña."}
+
+def reset_password(db: Session, request: ResetPasswordRequest):
+    reset_token = get_valid_reset_token(db, request.token)
+
+    if not reset_token:
+        raise HTTPException(status_code=400, detail="El enlace de recuperación es inválido o ha expirado.")
+
+    user = get_user(db, user_id=reset_token.user_id)
+    if not user:
+        raise HTTPException(status_code=404, detail="Usuario no encontrado")
+
+    user.user_password = pwd_context.hash(request.new_password)
+    reset_token.used = True
+
+    db.commit()
+
+    return {"message": "Tu contraseña ha sido actualizada correctamente."}

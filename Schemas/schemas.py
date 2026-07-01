@@ -70,3 +70,10 @@ class ProposalRequest(BaseModel):
     bars: int = 4
     num_variations: int = 3
     temperature: float = 1.0     
+
+class ForgotPasswordRequest(BaseModel):
+    user_email: EmailStr
+ 
+class ResetPasswordRequest(BaseModel):
+    token: str
+    new_password: str
